@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7fb">
+  <meta name="description" content="A unified view of four calendars.">
+  <title>My Calendars</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ical.js@2.2.1/build/ical.min.js"></script>
+  <style>
+    :root { color-scheme: light; --bg:#f6f7fb; --surface:#fff; --ink:#182033; --muted:#7d8497; --line:#e8eaf1; --accent:#4f7cff; --shadow:0 12px 36px rgba(32,44,78,.06); }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:"DM Sans",sans-serif; }
+    button,input { font:inherit; }
+    .shell { max-width:1500px; margin:0 auto; padding:30px clamp(14px,3vw,42px) 44px; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:26px; }
+    .brand { display:flex; gap:13px; align-items:center; }
+    .brand-icon { display:grid; place-items:center; width:48px; height:48px; background:#e9efff; border-radius:15px; color:#426af0; }
+    .brand-icon svg { width:25px; height:25px; }
+    h1 { font:800 clamp(24px,3vw,32px)/1.15 Manrope,sans-serif; letter-spacing:-1.2px; margin:0; }
+    .subtitle { color:var(--muted); margin-top:5px; font-size:13px; }
+    .header-actions { display:flex; gap:9px; align-items:center; }
+    .btn { border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:11px; padding:10px 14px; cursor:pointer; font-weight:600; font-size:13px; transition:.15s ease; }
+    .btn:hover { border-color:#cbd4f6; transform:translateY(-1px); }
+    .btn.primary { color:#fff; background:#426af0; border-color:#426af0; }
+    .layout { display:grid; grid-template-columns:255px minmax(0,1fr); gap:20px; align-items:start; }
+    .panel,.calendar-panel { background:var(--surface); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow); }
+    .panel { padding:21px 18px; }
+    .panel h2 { margin:0 0 16px; font:700 14px Manrope,sans-serif; }
+    .section-label { color:#9ba1b2; text-transform:uppercase; letter-spacing:1.2px; font-size:10px; font-weight:700; margin:25px 0 12px; }
+    .section-label:first-of-type { margin-top:0; }
+    .feed-list { display:grid; gap:8px; }
+    .feed-item { display:flex; align-items:center; gap:10px; padding:10px 9px; border-radius:10px; cursor:pointer; min-width:0; }
+    .feed-item:hover { background:#f7f8fc; }
+    .feed-item input { accent-color:#426af0; width:15px; height:15px; flex:0 0 auto; }
+    .feed-dot { width:9px; height:9px; border-radius:4px; flex:0 0 auto; }
+    .feed-name { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:13px; font-weight:600; }
+    .feed-item.off .feed-name { color:#a4a9b7; }
+    .search-wrap { position:relative; }
+    .search-wrap svg { position:absolute; left:12px; top:11px; width:17px; color:#969caf; }
+    .search { width:100%; border:1px solid var(--line); background:#fafbfe; border-radius:11px; padding:11px 12px 11px 37px; outline:none; font-size:13px; }
+    .search:focus { border-color:#a8b9ff; box-shadow:0 0 0 3px #edf1ff; }
+    .hint { color:var(--muted); font-size:12px; line-height:1.55; margin:12px 2px 0; }
+    .calendar-panel { padding:22px; min-width:0; }
+    .calendar-top { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px; }
+    .month-title { font:800 22px Manrope,sans-serif; letter-spacing:-.6px; }
+    .nav-buttons { display:flex; gap:7px; align-items:center; }
+    .nav-buttons .btn { padding:9px 12px; }
+    .view-buttons { display:flex; background:#f3f5fa; padding:4px; border-radius:11px; gap:2px; }
+    .view-buttons button { border:0; border-radius:8px; background:transparent; color:#777f93; padding:7px 10px; font-size:12px; cursor:pointer; font-weight:700; }
+    .view-buttons button.active { color:#26324d; background:#fff; box-shadow:0 2px 7px #18203310; }
+    #calendar { min-height:550px; }
+    .fc { --fc-border-color:#edf0f5; --fc-page-bg-color:#fff; --fc-neutral-bg-color:#f8f9fc; --fc-today-bg-color:#f3f6ff; font-size:12px; }
+    .fc .fc-toolbar { display:none; }
+    .fc .fc-col-header-cell-cushion { padding:12px 4px; color:#8a91a4; text-transform:uppercase; font-size:10px; letter-spacing:.7px; font-weight:700; }
+    .fc .fc-daygrid-day-number { padding:9px 10px; color:#5b6479; font-weight:600; }
+    .fc .fc-daygrid-day-frame { min-height:110px; }
+    .fc .fc-daygrid-event { border:0; border-radius:5px; padding:2px 4px; margin:2px 4px; font-weight:600; }
+    .fc .fc-event-time { font-weight:700; }
+    .fc .fc-timegrid-slot-label { color:#9aa1b2; font-size:11px; }
+    .fc .fc-timegrid-event { border-radius:6px; padding:2px 4px; }
+    .fc .fc-list-event:hover td { background:#f8f9fc; }
+    .statusbar { display:flex; justify-content:space-between; gap:10px; color:#9aa1b2; font-size:11px; padding-top:15px; }
+    .status-left { display:flex; gap:7px; align-items:center; }
+    .status-dot { width:7px; height:7px; background:#25b58a; border-radius:50%; }
+    .error-banner { display:none; margin-bottom:14px; padding:11px 13px; background:#fff8e9; border:1px solid #f6e1ad; border-radius:10px; color:#805c13; font-size:12px; line-height:1.5; }
+    .loading { display:flex; gap:9px; align-items:center; color:var(--muted); font-size:13px; padding:15px 0; }
+    .spinner { width:15px; height:15px; border:2px solid #dce3ff; border-top-color:#426af0; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .empty { padding:35px 12px; text-align:center; color:var(--muted); font-size:13px; }
+    .modal-backdrop { display:none; position:fixed; inset:0; background:#11182a66; z-index:10; padding:20px; align-items:center; justify-content:center; }
+    .modal-backdrop.open { display:flex; }
+    .modal { width:min(520px,100%); background:white; border-radius:18px; padding:24px; box-shadow:0 25px 90px #11182a30; }
+    .modal-head { display:flex; justify-content:space-between; align-items:flex-start; gap:15px; }
+    .modal h3 { font:800 21px/1.3 Manrope,sans-serif; margin:0 0 8px; }
+    .close { border:0; background:#f1f3f8; border-radius:9px; width:34px; height:34px; cursor:pointer; font-size:20px; }
+    .event-meta { color:#697187; font-size:13px; line-height:1.6; margin-top:13px; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .event-calendar { display:inline-flex; align-items:center; gap:7px; margin-top:18px; background:#f4f6fb; padding:7px 10px; border-radius:8px; font-size:12px; font-weight:700; }
+    @media(max-width:950px) { .layout { grid-template-columns:1fr; } .panel { order:2; } .feed-list { grid-template-columns:repeat(2,minmax(0,1fr)); } .calendar-panel { padding:15px; } .fc .fc-daygrid-day-frame { min-height:80px; } }
+    @media(max-width:600px) { .shell { padding-top:18px; } header { align-items:flex-start; } .header-actions .btn span { display:none; } .header-actions .btn { padding:10px; } .layout { gap:13px; } .calendar-top { flex-wrap:wrap; } .month-title { font-size:19px; } .nav-buttons { order:2; } .view-buttons { margin-left:auto; } .feed-list { grid-template-columns:1fr; } .fc .fc-daygrid-day-frame { min-height:54px; } .fc .fc-daygrid-day-number { padding:5px; } .fc .fc-daygrid-event { font-size:10px; } #calendar { min-height:420px; } .statusbar { flex-direction:column; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5.5" width="17" height="15" rx="3"/><path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17"/><path d="m8 14 2.3 2.3L16 12"/></svg>
+        </div>
+        <div><h1>My Calendars</h1><div class="subtitle">Four calendars, one clear view.</div></div>
+      </div>
+      <div class="header-actions">
+        <button class="btn" id="todayBtn">Today</button>
+        <button class="btn primary" id="refreshBtn"><span>↻ &nbsp;</span>Refresh</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel">
+        <h2>Calendars</h2>
+        <div class="section-label">Show calendars</div>
+        <div id="feedList" class="feed-list">
+          <div class="loading"><span class="spinner"></span>Loading calendars…</div>
+        </div>
+        <div class="section-label">Find an event</div>
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" fill="none"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+          <input class="search" id="searchInput" type="search" placeholder="Search titles and details…" autocomplete="off">
+        </div>
+        <p class="hint">Search filters the events currently loaded in the calendar. Click any event to see its description, location and source calendar.</p>
+        <div class="section-label">About this view</div>
+        <p class="hint">Read-only calendar. Changes made in Google Calendar appear after refreshing the feeds.</p>
+      </aside>
+
+      <section class="calendar-panel">
+        <div id="errorBanner" class="error-banner" role="status"></div>
+        <div class="calendar-top">
+          <div id="monthTitle" class="month-title">Loading…</div>
+          <div class="nav-buttons">
+            <button class="btn" id="prevBtn" aria-label="Previous period">‹</button>
+            <button class="btn" id="nextBtn" aria-label="Next period">›</button>
+          </div>
+          <div class="view-buttons" aria-label="Calendar view">
+            <button data-view="dayGridMonth" class="active">Month</button>
+            <button data-view="timeGridWeek">Week</button>
+            <button data-view="timeGridDay">Day</button>
+            <button data-view="listMonth">List</button>
+          </div>
+        </div>
+        <div id="loading" class="loading"><span class="spinner"></span>Fetching calendar feeds…</div>
+        <div id="calendar"></div>
+        <div class="statusbar">
+          <div class="status-left"><span class="status-dot"></span><span id="statusText">Connecting to calendar feeds</span></div>
+          <div id="updatedText">Events update when feeds are refreshed</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="eventModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-head"><div><h3 id="modalTitle">Event</h3><div id="modalTime" class="event-meta"></div></div><button class="close" id="closeModal" aria-label="Close">×</button></div>
+      <div id="modalLocation" class="event-meta"></div>
+      <div id="modalDescription" class="event-meta"></div>
+      <div id="modalCalendar" class="event-calendar"></div>
+    </div>
+  </div>
+
+  <script>
+    const state = { calendars: [], events: [], visible: new Set(), search: "", calendar: null, loading: false };
+    const $ = (id) => document.getElementById(id);
+    const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    const formatDate = (date, options = { weekday:"long", year:"numeric", month:"long", day:"numeric" }) => new Intl.DateTimeFormat(undefined, options).format(date);
+
+    function renderFeedList() {
+      const host = $("feedList");
+      if (!state.calendars.length) {
+        host.innerHTML = '<div class="empty">No calendar information received yet.</div>';
+        return;
+      }
+      host.innerHTML = state.calendars.map(cal => {
+        const checked = state.visible.has(cal.id);
+        const error = cal.error ? ` title="${escapeHTML(cal.error)}"` : "";
+        return `<label class="feed-item ${checked ? "" : "off"}"${error}>
+          <input type="checkbox" data-calendar="${escapeHTML(cal.id)}" ${checked ? "checked" : ""}>
+          <span class="feed-dot" style="background:${escapeHTML(cal.color)}"></span>
+          <span class="feed-name">${escapeHTML(cal.name)}${cal.error ? " · issue" : ""}</span>
+        </label>`;
+      }).join("");
+      host.querySelectorAll("input[data-calendar]").forEach(input => input.addEventListener("change", () => {
+        const id = input.dataset.calendar;
+        input.checked ? state.visible.add(id) : state.visible.delete(id);
+        renderFeedList();
+        renderEvents();
+      }));
+    }
+
+    function filteredEvents() {
+      const q = state.search.trim().toLocaleLowerCase();
+      return state.events.filter(event => {
+        const props = event.extendedProps || {};
+        return state.visible.has(props.calendarId) &&
+          (!q || [event.title, props.description, props.location, props.calendarName].some(x => String(x || "").toLocaleLowerCase().includes(q)));
+      });
+    }
+
+    function renderEvents() {
+      if (!state.calendar) return;
+      state.calendar.removeAllEvents();
+      state.calendar.addEventSource(filteredEvents());
+      $("statusText").textContent = `${filteredEvents().length} events shown · ${state.calendars.filter(c => !c.error).length}/${state.calendars.length} feeds connected`;
+    }
+
+    function updateTitle() {
+      const date = state.calendar.getDate();
+      const view = state.calendar.view;
+      if (view.type === "timeGridDay") $("monthTitle").textContent = formatDate(date, { weekday:"short", month:"short", day:"numeric", year:"numeric" });
+      else if (view.type === "timeGridWeek") {
+        const end = new Date(view.currentEnd.getTime() - 1);
+        $("monthTitle").textContent = `${formatDate(view.currentStart,{month:"short",day:"numeric"})} – ${formatDate(end,{month:"short",day:"numeric",year:"numeric"})}`;
+      } else $("monthTitle").textContent = formatDate(date, { month:"long", year:"numeric" });
+      document.querySelectorAll(".view-buttons button").forEach(button => button.classList.toggle("active", button.dataset.view === view.type));
+    }
+
+    function safeText(value, max = 4000) { return String(value ?? "").slice(0, max); }
+    function asDate(value) { return value?.toJSDate ? value.toJSDate() : null; }
+    function toISO(date) { return date.toISOString(); }
+
+    function parseICS(ics, calendar, rangeStart, rangeEnd) {
+      const root = new ICAL.Component(ICAL.parse(ics));
+      const components = root.getAllSubcomponents("vevent");
+      const baseEvents = new Map();
+      const exceptions = new Map();
+      for (const component of components) {
+        const event = new ICAL.Event(component);
+        if (event.isRecurrenceException()) {
+          const recurrenceId = component.getFirstPropertyValue("recurrence-id");
+          if (recurrenceId) exceptions.set(`${event.uid}::${recurrenceId.toString()}`, component);
+        } else baseEvents.set(event.uid, { event, component });
+      }
+      const output = [];
+      const push = (event, start, end, occurrenceId, component) => {
+        if (!start || !end || end < rangeStart || start > rangeEnd || output.length >= 5000) return;
+        const source = component ? new ICAL.Event(component) : event;
+        output.push({
+          id: `${calendar.id}-${event.uid}-${occurrenceId}`.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 240),
+          title: safeText(source.summary || event.summary || "(No title)", 300),
+          start: toISO(start), end: toISO(end),
+          allDay: Boolean((source.startDate || event.startDate).isDate),
+          backgroundColor: calendar.color, borderColor: calendar.color, textColor: "#ffffff",
+          extendedProps: {
+            calendarId: calendar.id, calendarName: calendar.name,
+            description: safeText(source.description || event.description || ""),
+            location: safeText(source.location || event.location || "", 1000)
+          }
+        });
+      };
+      for (const { event, component } of baseEvents.values()) {
+        if (component.getFirstPropertyValue("status") === "CANCELLED") continue;
+        if (event.isRecurring()) {
+          try {
+            const iterator = event.iterator(); let occurrence; let count = 0;
+            while ((occurrence = iterator.next()) && count++ < 20000 && output.length < 5000) {
+              const start = asDate(occurrence);
+              if (!start) continue;
+              if (start > rangeEnd) break;
+              const key = `${event.uid}::${occurrence.toString()}`;
+              const exceptionComponent = exceptions.get(key);
+              if (exceptionComponent) {
+                const exception = new ICAL.Event(exceptionComponent);
+                if (exception.component.getFirstPropertyValue("status") === "CANCELLED") continue;
+                push(event, asDate(exception.startDate), asDate(exception.endDate), occurrence.toString(), exceptionComponent);
+              } else {
+                const end = new Date(start.getTime() + event.duration.toSeconds() * 1000);
+                push(event, start, end, occurrence.toString(), component);
+              }
+            }
+          } catch (e) { console.warn(`Could not expand recurrence in ${calendar.name}`, e); }
+        } else {
+          push(event, asDate(event.startDate), asDate(event.endDate), "single", component);
+        }
+      }
+      return output;
+    }
+
+    async function loadFeeds() {
+      if (state.loading) return;
+      state.loading = true;
+      $("loading").style.display = "flex";
+      $("errorBanner").style.display = "none";
+      $("refreshBtn").disabled = true;
+      try {
+        const configResponse = await fetch("./calendars.json", { cache: "no-store" });
+        if (!configResponse.ok) throw new Error("Could not load calendars.json");
+        const config = await configResponse.json();
+        if (!Array.isArray(config) || !config.length) throw new Error("calendars.json must be a non-empty JSON array");
+        const view = state.calendar?.view;
+        const start = view?.activeStart || new Date(new Date().getFullYear(), new Date().getMonth()-3, 1);
+        const end = view?.activeEnd || new Date(new Date().getFullYear(), new Date().getMonth()+13, 1);
+        const rangeStart = new Date(start.getTime() - 90 * 86400000);
+        const rangeEnd = new Date(end.getTime() + 90 * 86400000);
+        const results = await Promise.all(config.map(async (item, index) => {
+          const cal = { id: `cal${index + 1}`, name: String(item.name || `Calendar ${index + 1}`), color: /^#[0-9a-f]{6}$/i.test(item.color || "") ? item.color : ["#4F7CFF", "#10A37F", "#E39B35", "#B06BE0"][index % 4], url: String(item.url || "") };
+          try {
+            if (!/^https?:\/\//i.test(cal.url)) throw new Error("Invalid feed URL");
+            const response = await fetch(cal.url, { cache: "no-store" });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const ics = await response.text();
+            if (!ics.includes("BEGIN:VCALENDAR")) throw new Error("URL did not return iCalendar data");
+            return { calendar: cal, events: parseICS(ics, cal, rangeStart, rangeEnd), error: null };
+          } catch (error) {
+            const message = error instanceof TypeError ? "Browser blocked this feed (usually CORS). Static hosting cannot proxy it." : safeText(error.message || "Could not load feed", 180);
+            return { calendar: cal, events: [], error: message };
+          }
+        }));
+        state.calendars = results.map(r => ({ ...r.calendar, error: r.error }));
+        state.events = results.flatMap(r => r.events);
+        if (!state.visible.size) state.calendars.forEach(cal => state.visible.add(cal.id));
+        renderFeedList(); renderEvents();
+        const failed = state.calendars.filter(cal => cal.error);
+        if (failed.length) {
+          $("errorBanner").textContent = failed.map(cal => `${cal.name}: ${cal.error}`).join(" · ");
+          $("errorBanner").style.display = "block";
+        }
+        $("updatedText").textContent = `Updated ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`;
+      } catch (error) {
+        $("errorBanner").textContent = `Could not load calendar feeds. ${error.message}. Check calendars.json and try again.`;
+        $("errorBanner").style.display = "block";
+        $("statusText").textContent = "Unable to load feeds";
+      } finally {
+        state.loading = false;
+        $("loading").style.display = "none";
+        $("refreshBtn").disabled = false;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      state.calendar = new FullCalendar.Calendar($("calendar"), {
+        initialView: "dayGridMonth",
+        height: "auto",
+        firstDay: 1,
+        dayMaxEvents: 4,
+        nowIndicator: true,
+        headerToolbar: false,
+        navLinks: true,
+        eventTimeFormat: { hour:"2-digit", minute:"2-digit", hour12:false },
+        datesSet: () => { updateTitle(); loadFeeds(); },
+        eventClick: (info) => {
+          info.jsEvent.preventDefault();
+          const event = info.event;
+          const props = event.extendedProps || {};
+          $("modalTitle").textContent = event.title;
+          $("modalTime").textContent = event.allDay
+            ? `${formatDate(event.start)} · All day${event.end ? ` to ${formatDate(new Date(event.end.getTime()-86400000))}` : ""}`
+            : `${formatDate(event.start)}${event.end ? ` – ${new Intl.DateTimeFormat(undefined,{hour:"2-digit",minute:"2-digit"}).format(event.end)}` : ""}`;
+          $("modalLocation").textContent = props.location ? `⌖  ${props.location}` : "";
+          $("modalDescription").textContent = props.description || "No additional description.";
+          $("modalCalendar").innerHTML = `<span class="feed-dot" style="background:${escapeHTML(event.backgroundColor)}"></span>${escapeHTML(props.calendarName || "Calendar")}`;
+          $("eventModal").classList.add("open");
+        }
+      });
+      state.calendar.render();
+      $("prevBtn").addEventListener("click", () => state.calendar.prev());
+      $("nextBtn").addEventListener("click", () => state.calendar.next());
+      $("todayBtn").addEventListener("click", () => state.calendar.today());
+      $("refreshBtn").addEventListener("click", loadFeeds);
+      $("searchInput").addEventListener("input", (event) => { state.search = event.target.value; renderEvents(); });
+      document.querySelectorAll(".view-buttons button").forEach(button => button.addEventListener("click", () => state.calendar.changeView(button.dataset.view)));
+      $("closeModal").addEventListener("click", () => $("eventModal").classList.remove("open"));
+      $("eventModal").addEventListener("click", event => { if (event.target === $("eventModal")) $("eventModal").classList.remove("open"); });
+      document.addEventListener("keydown", event => { if (event.key === "Escape") $("eventModal").classList.remove("open"); });
+    });
+  </script>
+</body>
+</html>
