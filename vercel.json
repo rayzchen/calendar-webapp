@@ -1,0 +1,4 @@
+{
+  "outputDirectory": "public",
+  "functions": { "api/events.js": { "includeFiles": "calendars.json", "maxDuration": 15 } }
+}
