@@ -156,7 +156,7 @@ async function ensureData(force) {
   const from = addDays(vs, -28), to = addDays(vs, n + 56), my = ++S.seq;
   $("bar").className = "on";
   try {
-    const r = await fetch(`/api/events?start=${from.toISOString()}&end=${to.toISOString()}${force ? "&refresh=1" : ""}`);
+    const r = await fetch(`api/events?start=${from.toISOString()}&end=${to.toISOString()}${force ? "&refresh=1" : ""}`);
     if (!r.ok) throw new Error(`Server returned ${r.status}`);
     const d = await r.json();
     if (my !== S.seq) return;
