@@ -160,15 +160,32 @@ async function ensureData(force) {
     if (!r.ok) throw new Error(`Server returned ${r.status}`);
     const d = await r.json();
     if (my !== S.seq) return;
-    S.cals = d.calendars; S.events = d.events.map(parseEv); S.loaded = [from, to];
+    S.events = S.events.filter(e => !(e.e > from && e.s < to)).concat(d.events.map(parseEv));
+    S.cals = d.calendars; S.loaded = [from, to]; saveCache();
     const bad = S.cals.filter(c => c.error);
     $("msg").style.display = bad.length ? "block" : "none";
     $("msg").textContent = bad.map(c => `${c.name}: ${c.error}`).join(" · ");
     renderCals(); renderGrid();
   } catch (err) {
     $("msg").style.display = "block";
-    $("msg").textContent = `Couldn't load events (${err.message}). Press ↻ to retry.`;
+    $("msg").textContent = `Couldn't load events (${err.message}).${S.events.length ? " Showing saved data." : ""} Press ↻ to retry.`;
   } finally { if (my === S.seq) { $("bar").className = ""; } }
+}
+
+/* ---------- local cache: paint saved events instantly, refresh in the background ---------- */
+const CACHE_KEY = "calcache:v1";
+function saveCache() {
+  try {
+    const vs = viewStart(), lo = addDays(vs, -90), hi = addDays(vs, 120);
+    const events = S.events.filter(e => e.e > lo && e.s < hi).map(({ s, e, ...raw }) => raw);
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ calendars: S.cals.map(({ error, ...c }) => c), events }));
+  } catch { /* storage full or unavailable: carry on without a cache */ }
+}
+function loadCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+    if (c && c.calendars && c.events) { S.cals = c.calendars; S.events = c.events.map(parseEv); }
+  } catch { localStorage.removeItem(CACHE_KEY); }
 }
 
 /* ---------- navigation ---------- */
@@ -343,6 +360,7 @@ setInterval(updateNow, 20000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) updateNow(); });
 
 S.mini = new Date(S.anchor.getFullYear(), S.anchor.getMonth(), 1);
+loadCache(); renderCals();
 renderMini(); renderGrid(); ensureData();
 </script>
 </body>
